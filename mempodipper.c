@@ -140,7 +140,7 @@ int main(int argc, char **argv)
 	printf("===============================\n");
 	printf("=          Mempodipper        =\n");
 	printf("=           by zx2c4          =\n");
-	printf("=         Jan 21, 2012         =\n");
+	printf("=         Jan 21, 2012        =\n");
 	printf("===============================\n\n");
 	
 	int parent_pid = getpid();
