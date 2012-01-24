@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
@@ -41,11 +40,9 @@ int main(int argc, char *argv[])
 #error "That platform is not supported."
 #endif
 			if (instruction_pointer < upper_bound) {
-				uint32_t instruction = ptrace(PTRACE_PEEKTEXT, child, instruction_pointer, NULL);
-				int operator = instruction & 0xFF;
-				if (operator == 0xe8 /* call */) {
-					int32_t offset = ptrace(PTRACE_PEEKTEXT, child, instruction_pointer + 1, NULL) + 5;
-					printf("0x%lx\n", instruction_pointer + offset);
+				unsigned long instruction = ptrace(PTRACE_PEEKTEXT, child, instruction_pointer, NULL);
+				if ((instruction & 0xffff) == 0x25ff /* jmp r/m32 */) {
+					printf("0x%lx\n", instruction_pointer);
 					break;
 				}
 			}
