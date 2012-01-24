@@ -157,7 +157,6 @@ unsigned long objdump_address()
 		return 0;
 	}
 	char result[32];
-	result[0] = 0;
 	fgets(result, 32, command);
 	pclose(command);
 	return strtoul(result, NULL, 16);
