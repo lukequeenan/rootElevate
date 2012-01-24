@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
@@ -9,7 +10,6 @@
 #include <sys/user.h>
 #include <sys/ptrace.h>
 #include <sys/reg.h>
-#include <asm/unistd_64.h>
 
 int main(int argc, char *argv[])
 {
@@ -31,9 +31,23 @@ int main(int argc, char *argv[])
 			ptrace(PTRACE_SINGLESTEP, child, NULL, NULL);
 			wait(NULL);
 			ptrace(PTRACE_GETREGS, child, NULL, &regs);
-			if (regs.rip < 0x700000000000) {
-				printf("0x%lx\n", regs.rip);
-				break;
+#if defined(__i386__)
+#define instruction_pointer regs.eip
+#define upper_bound 0xb0000000
+#elif defined(__x86_64__)
+#define instruction_pointer regs.rip
+#define upper_bound 0x700000000000
+#else
+#error "That platform is not supported."
+#endif
+			if (instruction_pointer < upper_bound) {
+				uint32_t instruction = ptrace(PTRACE_PEEKTEXT, child, instruction_pointer, NULL);
+				int operator = instruction & 0xFF;
+				if (operator == 0xe8 /* call */) {
+					int32_t offset = ptrace(PTRACE_PEEKTEXT, child, instruction_pointer + 1, NULL) + 5;
+					printf("0x%lx\n", instruction_pointer + offset);
+					break;
+				}
 			}
 		}
 	} else {
