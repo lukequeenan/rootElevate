@@ -13,9 +13,9 @@ int 0x80
 xor ebx,ebx
 mov al,0x2e
 int 0x80
-;dup2(6, 2)
+;dup2(15, 2)
 xor ecx,ecx
-mov bl,0x6
+mov bl,0xf
 mov cl,0x2
 mov al,0x3f
 int 0x80
