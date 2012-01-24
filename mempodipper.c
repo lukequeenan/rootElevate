@@ -197,7 +197,7 @@ int main(int argc, char **argv)
 		if (argc > 2 && argv[1][0] == '-' && argv[1][1] == 'o')
 			address = strtoul(argv[2], NULL, 16);
 		else {
-			printf("[+] Ptracing su to find exit@plt without reading binary.\n");
+			printf("[+] Ptracing su to find next instruction without reading binary.\n");
 			address = ptrace_address();
 			if (!address) {
 				printf("[-] Ptrace failed.\n");
