@@ -15,7 +15,8 @@
  * CVE-2012-0056
  */
 
-#define _LARGEFILE64_SOURCE 
+#define _LARGEFILE64_SOURCE
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
